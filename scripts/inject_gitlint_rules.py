@@ -35,10 +35,16 @@ def _read_version(repo_root: Path) -> str:
     raise RuntimeError("Could not find version in pyproject.toml")
 
 
+def _flow_seq(items: list[str]) -> CommentedSeq:
+    seq = CommentedSeq(items)
+    seq.fa.set_flow_style()
+    return seq
+
+
 def _new_gitlint_entry(version: str) -> CommentedMap:
     hook = CommentedMap()
     hook["id"] = "shovels-gitlint"
-    hook["stages"] = ["commit-msg"]
+    hook["stages"] = _flow_seq(["commit-msg"])
     entry = CommentedMap()
     entry["repo"] = SHOVELS_REPO
     entry["rev"] = f"v{version}"
@@ -97,12 +103,11 @@ def cleanup_legacy_artifacts(target_root: Path) -> None:
     gitlint_cfg = target_root / ".gitlint"
     if gitlint_cfg.exists():
         original = gitlint_cfg.read_text()
-        cleaned = "\n".join(
+        kept = [
             line for line in original.splitlines() if not line.strip().startswith("extra-path=")
-        )
+        ]
+        cleaned = "\n".join(kept) + ("\n" if original.endswith("\n") else "")
         if cleaned != original:
-            if not cleaned.endswith("\n"):
-                cleaned += "\n"
             gitlint_cfg.write_text(cleaned)
             print(f"  removed extra-path line from .gitlint")
 
