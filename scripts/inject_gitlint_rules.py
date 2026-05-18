@@ -24,7 +24,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 OLD_GITLINT_REPO = "https://github.com/jorisroovers/gitlint"
-SHOVELS_REPO = "https://github.com/ShovelsAI/shovels-gitlint-rules"
+SHOVELS_REPO = "git@github.com:ShovelsAI/shovels-gitlint-rules.git"
 
 
 def _read_version(repo_root: Path) -> str:
