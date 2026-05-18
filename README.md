@@ -34,13 +34,25 @@ pre-commit install --hook-type commit-msg
 
 `.gitlint` is still used for built-in rules (title-max-length, body-min-length, etc.) — only the custom rules are injected by this hook.
 
-### Automated rollout
+### Per-repo rule selection
 
-`scripts/inject_gitlint_rules.py` does the `.pre-commit-config.yaml` edit and cleans up legacy vendored artifacts:
+`shovels-gitlint` reads the consuming repo's `.gitlint`, so individual rules can be disabled per repo without changes here. Either approach works:
 
-```bash
-uv run python scripts/inject_gitlint_rules.py /path/to/target-repo
+```ini
+# .gitlint
+[general]
+ignore=UL101,UC100
 ```
+
+or pass `args` on the hook:
+
+```yaml
+- id: shovels-gitlint
+  args: [--ignore=UL101]
+  stages: [commit-msg]
+```
+
+For one-off escape hatches, add `gitlint-ignore: <rule-id>` as a line in the commit message.
 
 ## How it works
 

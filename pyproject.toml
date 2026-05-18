@@ -21,7 +21,6 @@ packages = ["src/shovels_gitlint_rules"]
 [dependency-groups]
 dev = [
     "pytest>=8",
-    "ruamel-yaml>=0.18",
     "gitlint>=0.19",
 ]
 
