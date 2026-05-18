@@ -24,7 +24,7 @@ def test_passes_when_title_capitalized(rule, title):
 @pytest.mark.parametrize(
     "title",
     [
-        "fix: something",
+        "fix: something",  # also caught by UL101, that's fine
         "feat: add thing",
         "chore: bump deps",
         "lowercase start",

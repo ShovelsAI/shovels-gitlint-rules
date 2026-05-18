@@ -19,9 +19,9 @@ class TitleStartsCapitalized(LineRule):
             RuleViolation(
                 self.id,
                 (
-                    "Title must start with a capital letter. "
-                    "Conventional-commits prefixes ('fix:', 'feat:', 'chore:') are not allowed; "
-                    "use a capitalized imperative like 'Fix login redirect' or 'Add retry logic'."
+                    "Title must start with a capital letter (A-Z). "
+                    "Use a capitalized imperative like 'Fix login redirect' or 'Add retry logic'. "
+                    "Common offenders: lowercase first word, leading whitespace, leading digits or symbols."
                 ),
                 line,
             )

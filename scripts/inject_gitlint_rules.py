@@ -24,7 +24,11 @@ from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 GITLINT_REPO = "https://github.com/jorisroovers/gitlint"
 GITLINT_REV = "v0.19.1"
-RULE_FILES = ("body_no_ticket_id.py", "title_starts_capitalized.py")
+RULE_FILES = (
+    "body_no_ticket_id.py",
+    "title_starts_capitalized.py",
+    "title_no_conventional_commits_prefix.py",
+)
 AUTO_HEADER_TEMPLATE = (
     "# AUTO-GENERATED from shovels-gitlint-rules@{version}. DO NOT EDIT.\n"
     "# Source: https://github.com/ShovelsAI/shovels-gitlint-rules\n"
