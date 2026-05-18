@@ -17,14 +17,12 @@ Rationale: see [`ENG-2640`](https://linear.app/shovels/issue/ENG-2640).
 Add to `.pre-commit-config.yaml` (and remove the standalone `jorisroovers/gitlint` hook if present — this hook runs gitlint itself):
 
 ```yaml
-- repo: git@github.com:ShovelsAI/shovels-gitlint-rules.git
+- repo: https://github.com/ShovelsAI/shovels-gitlint-rules
   rev: v0.3.1
   hooks:
     - id: shovels-gitlint
       stages: [commit-msg]
 ```
-
-> SSH URL is required because the repo is private. All Shovels engineers already have SSH access via their existing GitHub keys.
 
 Then:
 
