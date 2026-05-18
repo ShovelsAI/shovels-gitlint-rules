@@ -1,39 +1,30 @@
-"""Inject shovels-gitlint-rules into a target repo.
+"""Inject the shovels-gitlint pre-commit hook into a target repo.
 
 Idempotent. Run from the shovels-gitlint-rules repo root:
 
     uv run python scripts/inject_gitlint_rules.py /path/to/target-repo
 
-Performs three changes on the target:
+Edits `.pre-commit-config.yaml` in the target so the standard ``jorisroovers/gitlint``
+hook is replaced by ``ShovelsAI/shovels-gitlint-rules`` (which runs gitlint with
+our custom rules pre-loaded via ``--extra-path``). The hook reads ``.gitlint``
+for built-in rules; no other config changes needed.
 
-1. Copies rule files into ``<target>/.gitlint-rules/`` with an AUTO-GENERATED header.
-2. Ensures ``<target>/.gitlint`` has ``[general] extra-path=.gitlint-rules`` (and
-   creates a minimal ``.gitlint`` if missing).
-3. Ensures ``<target>/.pre-commit-config.yaml`` has the gitlint hook on the
-   ``commit-msg`` stage. Adds the hook block if the repo entry is missing.
+Also cleans up artifacts from the older vendored approach (``gitlint_rules/``
+directory and ``extra-path=`` line in ``.gitlint``).
 """
 
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 from pathlib import Path
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
-GITLINT_REPO = "https://github.com/jorisroovers/gitlint"
-GITLINT_REV = "v0.19.1"
-RULE_FILES = (
-    "body_no_ticket_id.py",
-    "title_starts_capitalized.py",
-    "title_no_conventional_commits_prefix.py",
-)
-AUTO_HEADER_TEMPLATE = (
-    "# AUTO-GENERATED from shovels-gitlint-rules@{version}. DO NOT EDIT.\n"
-    "# Source: https://github.com/ShovelsAI/shovels-gitlint-rules\n"
-    "# Re-run scripts/inject_gitlint_rules.py to update.\n\n"
-)
+OLD_GITLINT_REPO = "https://github.com/jorisroovers/gitlint"
+SHOVELS_REPO = "https://github.com/ShovelsAI/shovels-gitlint-rules"
 
 
 def _read_version(repo_root: Path) -> str:
@@ -44,107 +35,93 @@ def _read_version(repo_root: Path) -> str:
     raise RuntimeError("Could not find version in pyproject.toml")
 
 
-def copy_rules(source_root: Path, target_root: Path, version: str) -> None:
-    target_dir = target_root / "gitlint_rules"
-    target_dir.mkdir(exist_ok=True)
-    header = AUTO_HEADER_TEMPLATE.format(version=version)
-    for name in RULE_FILES:
-        src = source_root / "gitlint_rules" / name
-        dst = target_dir / name
-        dst.write_text(header + src.read_text())
-        print(f"  wrote {dst.relative_to(target_root)}")
-    init = target_dir / "__init__.py"
-    if not init.exists():
-        init.write_text("")
+def _new_gitlint_entry(version: str) -> CommentedMap:
+    hook = CommentedMap()
+    hook["id"] = "shovels-gitlint"
+    hook["stages"] = ["commit-msg"]
+    entry = CommentedMap()
+    entry["repo"] = SHOVELS_REPO
+    entry["rev"] = f"v{version}"
+    entry["hooks"] = [hook]
+    return entry
 
 
-def update_gitlint(target_root: Path) -> None:
-    path = target_root / ".gitlint"
-    existing = path.read_text() if path.exists() else ""
-    if "extra-path=gitlint_rules" in existing:
-        print(f"  .gitlint already references extra-path; leaving as-is")
-        return
-
-    if not existing.strip():
-        path.write_text(
-            "[general]\n"
-            "extra-path=gitlint_rules\n"
-            "ignore=body-is-missing\n"
-            "\n"
-            "[title-max-length]\n"
-            "line-length=50\n"
-            "\n"
-            "[body-max-line-length]\n"
-            "line-length=72\n"
-        )
-        print(f"  created .gitlint")
-        return
-
-    lines = existing.splitlines(keepends=True)
-    out: list[str] = []
-    inserted = False
-    in_general = False
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("[") and stripped.endswith("]"):
-            if in_general and not inserted:
-                out.append("extra-path=gitlint_rules\n")
-                inserted = True
-            in_general = stripped == "[general]"
-        out.append(line)
-    if in_general and not inserted:
-        if not out[-1].endswith("\n"):
-            out.append("\n")
-        out.append("extra-path=gitlint_rules\n")
-        inserted = True
-    if not inserted:
-        prefix = "" if not out or out[-1].endswith("\n") else "\n"
-        out.append(f"{prefix}[general]\nextra-path=gitlint_rules\n")
-    path.write_text("".join(out))
-    print(f"  updated .gitlint with extra-path=.gitlint-rules")
-
-
-def update_precommit_config(target_root: Path) -> None:
+def update_precommit_config(target_root: Path, version: str) -> None:
     path = target_root / ".pre-commit-config.yaml"
     yaml = YAML()
     yaml.preserve_quotes = True
     yaml.indent(mapping=2, sequence=4, offset=2)
     if not path.exists():
-        raise FileNotFoundError(f"{path} not found; cannot inject gitlint hook")
+        raise FileNotFoundError(f"{path} not found; cannot inject hook")
 
     config = yaml.load(path)
     repos = config.setdefault("repos", CommentedSeq())
 
-    gitlint_entry = next(
-        (r for r in repos if isinstance(r, dict) and r.get("repo") == GITLINT_REPO), None
+    shovels_idx = next(
+        (i for i, r in enumerate(repos) if isinstance(r, dict) and r.get("repo") == SHOVELS_REPO),
+        None,
     )
-    if gitlint_entry is None:
-        hook = CommentedMap()
-        hook["id"] = "gitlint"
-        hook["stages"] = ["commit-msg"]
-        entry = CommentedMap()
-        entry["repo"] = GITLINT_REPO
-        entry["rev"] = GITLINT_REV
-        entry["hooks"] = [hook]
-        repos.append(entry)
-        print(f"  added gitlint hook to .pre-commit-config.yaml")
-    else:
-        hooks = gitlint_entry.get("hooks", [])
-        gitlint_hook = next((h for h in hooks if h.get("id") == "gitlint"), None)
-        if gitlint_hook is None:
-            hooks.append(
-                CommentedMap([("id", "gitlint"), ("stages", ["commit-msg"])])
-            )
-            print(f"  added gitlint hook to existing gitlint repo entry")
+    if shovels_idx is not None:
+        entry = repos[shovels_idx]
+        if entry.get("rev") != f"v{version}":
+            entry["rev"] = f"v{version}"
+            print(f"  bumped {SHOVELS_REPO} to v{version}")
         else:
-            stages = gitlint_hook.get("stages")
-            if not stages or "commit-msg" not in stages:
-                gitlint_hook["stages"] = ["commit-msg"]
-                print(f"  set stages: [commit-msg] on gitlint hook")
-            else:
-                print(f"  gitlint hook already configured; leaving as-is")
+            print(f"  {SHOVELS_REPO}@v{version} already present; leaving as-is")
+    else:
+        old_idx = next(
+            (
+                i
+                for i, r in enumerate(repos)
+                if isinstance(r, dict) and r.get("repo") == OLD_GITLINT_REPO
+            ),
+            None,
+        )
+        new_entry = _new_gitlint_entry(version)
+        if old_idx is not None:
+            repos[old_idx] = new_entry
+            print(f"  replaced {OLD_GITLINT_REPO} with {SHOVELS_REPO}@v{version}")
+        else:
+            repos.append(new_entry)
+            print(f"  added {SHOVELS_REPO}@v{version}")
 
     yaml.dump(config, path)
+
+
+def cleanup_legacy_artifacts(target_root: Path) -> None:
+    legacy_dir = target_root / "gitlint_rules"
+    if legacy_dir.is_dir():
+        shutil.rmtree(legacy_dir)
+        print(f"  removed legacy {legacy_dir.relative_to(target_root)}/")
+
+    gitlint_cfg = target_root / ".gitlint"
+    if gitlint_cfg.exists():
+        original = gitlint_cfg.read_text()
+        cleaned = "\n".join(
+            line for line in original.splitlines() if not line.strip().startswith("extra-path=")
+        )
+        if cleaned != original:
+            if not cleaned.endswith("\n"):
+                cleaned += "\n"
+            gitlint_cfg.write_text(cleaned)
+            print(f"  removed extra-path line from .gitlint")
+
+
+def ensure_default_gitlint(target_root: Path) -> None:
+    path = target_root / ".gitlint"
+    if path.exists() and path.read_text().strip():
+        return
+    path.write_text(
+        "[general]\n"
+        "ignore=body-is-missing\n"
+        "\n"
+        "[title-max-length]\n"
+        "line-length=50\n"
+        "\n"
+        "[body-max-line-length]\n"
+        "line-length=72\n"
+    )
+    print(f"  created default .gitlint")
 
 
 def main(argv: list[str]) -> int:
@@ -160,10 +137,10 @@ def main(argv: list[str]) -> int:
         return 2
 
     version = _read_version(source_root)
-    print(f"Injecting shovels-gitlint-rules@{version} into {target_root}")
-    copy_rules(source_root, target_root, version)
-    update_gitlint(target_root)
-    update_precommit_config(target_root)
+    print(f"Injecting shovels-gitlint-rules@v{version} into {target_root}")
+    cleanup_legacy_artifacts(target_root)
+    ensure_default_gitlint(target_root)
+    update_precommit_config(target_root, version)
     print("Done.")
     return 0
 

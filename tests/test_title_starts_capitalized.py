@@ -1,6 +1,6 @@
 import pytest
 
-from gitlint_rules.title_starts_capitalized import TitleStartsCapitalized
+from shovels_gitlint_rules.rules.title_starts_capitalized import TitleStartsCapitalized
 
 
 @pytest.fixture

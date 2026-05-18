@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from gitlint_rules.body_no_ticket_id import BodyNoTicketId
+from shovels_gitlint_rules.rules.body_no_ticket_id import BodyNoTicketId
 
 
 def _commit(body_lines: list[str]):

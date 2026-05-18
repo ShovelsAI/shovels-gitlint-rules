@@ -1,6 +1,6 @@
 import pytest
 
-from gitlint_rules.title_no_conventional_commits_prefix import TitleNoConventionalCommitsPrefix
+from shovels_gitlint_rules.rules.title_no_conventional_commits_prefix import TitleNoConventionalCommitsPrefix
 
 
 @pytest.fixture

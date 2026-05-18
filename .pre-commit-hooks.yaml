@@ -1,0 +1,8 @@
+- id: shovels-gitlint
+  name: shovels-gitlint
+  description: Run gitlint with Shovels custom commit-msg rules (UL100, UL101, UC100).
+  entry: shovels-gitlint
+  language: python
+  stages: [commit-msg]
+  args: [--staged, --msg-filename]
+  minimum_pre_commit_version: 3.2.0

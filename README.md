@@ -1,6 +1,6 @@
 # shovels-gitlint-rules
 
-Shared custom [gitlint](https://jorisroovers.com/gitlint/) rules used across Shovels repos.
+Shared custom [gitlint](https://jorisroovers.com/gitlint/) rules used across Shovels repos, packaged as a pre-commit hook.
 
 ## Rules
 
@@ -12,19 +12,37 @@ Shared custom [gitlint](https://jorisroovers.com/gitlint/) rules used across Sho
 
 Rationale: see [`ENG-2640`](https://linear.app/shovels/issue/ENG-2640).
 
-## Install into a target repo
+## Use in a Shovels repo
 
-Use the injector — it copies the two rule files into `gitlint_rules/`, sets `extra-path` in `.gitlint`, and adds the gitlint hook to `.pre-commit-config.yaml` if missing. It is idempotent.
+Add to `.pre-commit-config.yaml` (and remove the standalone `jorisroovers/gitlint` hook if present — this hook runs gitlint itself):
+
+```yaml
+- repo: https://github.com/ShovelsAI/shovels-gitlint-rules
+  rev: v0.3.0
+  hooks:
+    - id: shovels-gitlint
+      stages: [commit-msg]
+```
+
+Then:
+
+```bash
+pre-commit install --hook-type commit-msg
+```
+
+`.gitlint` is still used for built-in rules (title-max-length, body-min-length, etc.) — only the custom rules are injected by this hook.
+
+### Automated rollout
+
+`scripts/inject_gitlint_rules.py` does the `.pre-commit-config.yaml` edit and cleans up legacy vendored artifacts:
 
 ```bash
 uv run python scripts/inject_gitlint_rules.py /path/to/target-repo
 ```
 
-After injection, in the target repo:
+## How it works
 
-```bash
-pre-commit install --hook-type commit-msg
-```
+gitlint discovers user-defined rules exclusively via `--extra-path`. Rather than vendoring rule files into every repo, we ship them inside this package and provide a `shovels-gitlint` console script that invokes gitlint with `--extra-path` set to the packaged rules directory. pre-commit installs the package into its hook venv from git; one rev bump in `.pre-commit-config.yaml` is the only thing each consuming repo ever changes.
 
 ## Development
 
@@ -33,9 +51,9 @@ uv sync
 uv run pytest
 ```
 
-End-to-end smoke test against the bundled rules:
+End-to-end smoke test:
 
 ```bash
-echo "fix: lowercase" | uv run gitlint --extra-path gitlint_rules     # fails UL100
-printf "Real title\n\nCloses ENG-1\n" | uv run gitlint --extra-path gitlint_rules  # fails UC100
+echo "fix: lowercase" | uv run shovels-gitlint            # fails UL100 + UL101
+printf "Real title\n\nCloses ENG-1 here\n" | uv run shovels-gitlint  # fails UC100
 ```
