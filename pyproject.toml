@@ -1,0 +1,25 @@
+[project]
+name = "shovels-gitlint-rules"
+version = "0.1.0"
+description = "Shared custom gitlint rules for Shovels repos"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "gitlint-core>=0.19",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruamel-yaml>=0.18",
+    "gitlint>=0.19",
+]
+
+[tool.uv]
+exclude-newer = "7 days"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

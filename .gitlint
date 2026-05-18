@@ -1,0 +1,9 @@
+[general]
+extra-path=gitlint_rules
+ignore=body-is-missing
+
+[title-max-length]
+line-length=50
+
+[body-max-line-length]
+line-length=72
