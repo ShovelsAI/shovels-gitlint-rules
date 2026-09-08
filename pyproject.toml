@@ -1,6 +1,6 @@
 [project]
 name = "shovels-gitlint-rules"
-version = "0.3.1"
+version = "0.4.0"
 description = "Shared custom gitlint rules for Shovels repos, exposed as a pre-commit hook"
 readme = "README.md"
 requires-python = ">=3.10"

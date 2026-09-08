@@ -19,7 +19,7 @@ Add to `.pre-commit-config.yaml` (and remove the standalone `jorisroovers/gitlin
 
 ```yaml
 - repo: https://github.com/ShovelsAI/shovels-gitlint-rules
-  rev: v0.3.1
+  rev: v0.4.0
   hooks:
     - id: shovels-gitlint
       stages: [commit-msg]
