@@ -9,8 +9,9 @@ Shared custom [gitlint](https://jorisroovers.com/gitlint/) rules used across Sho
 | `UL100` | `title-starts-capitalized` | Title doesn't start with a capital letter (A-Z). |
 | `UL101` | `title-no-conventional-commits-prefix` | Conventional-commits prefix at the start of the title: `<type>:` or `<type>(<scope>):` (e.g. `fix:`, `feat(api):`, `chore(ci):`). Matches any letter-only type, case-insensitive. |
 | `UC100` | `body-no-ticket-id` | Ticket IDs in the commit body (`ENG-1234`, `JIRA-9`, `GH-100`, etc.). Linear linkage comes from the branch name. |
+| `UC101` | `body-no-tool-provenance-trailer` | Tool-provenance trailers in the commit body: `Claude-Session:`, `Generated-With:`, `Generated-By:`, and `Co-Authored-By:` naming a bot or coding agent. Human co-authors pass. History must be self-contained. |
 
-Rationale: see [`ENG-2640`](https://linear.app/shovels/issue/ENG-2640).
+Rationale: see [`ENG-2640`](https://linear.app/shovels/issue/ENG-2640) and [`ENG-4554`](https://linear.app/shovels/issue/ENG-4554).
 
 ## Use in a Shovels repo
 
@@ -68,4 +69,5 @@ End-to-end smoke test:
 ```bash
 echo "fix: lowercase" | uv run shovels-gitlint            # fails UL100 + UL101
 printf "Real title\n\nCloses ENG-1 here\n" | uv run shovels-gitlint  # fails UC100
+printf "Real title\n\nClaude-Session: https://x\n" | uv run shovels-gitlint  # fails UC101
 ```
